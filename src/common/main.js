@@ -5,20 +5,16 @@ const fsPromises = require('fs').promises;
 const fs_extra = require('fs-extra');
 const { LIVE_URL } = require('./variable');
 const { pool } = require('../sql/connectToDatabase');
+const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
-const getServerIpAddress = () => {
-    const ifaces = os.networkInterfaces();
-    let IPAddress = '';
+const generateUUID = () => {
+    const uniqueID = uuidv4().toLocaleUpperCase();
+    return uniqueID
+}
 
-    Object.keys(ifaces).forEach(ifname => {
-        ifaces[ifname].forEach(iface => {
-            if (iface.family === 'IPv4' && !iface.internal) {
-                IPAddress = iface.address;
-            }
-        });
-    });
-
+const getServerIpAddress = (req) => {
+    const IPAddress = req?.headers['x-forwarded-for'] || req?.socket?.remoteAddress || 'Not Found';
     return IPAddress;
 };
 
@@ -317,7 +313,7 @@ const base64Decode = (encodedText) => {
 
 const getNextMaxId = async (fieldName, tableName) => {
     try {
-        const query = `SELECT ISNULL(MAX(${fieldName}), 0) + 1 AS NextId FROM ${tableName}`;
+        const query = `SELECT ISNULL(MAX('${fieldName}'), 0) + 1 AS NextId FROM ${tableName}`;
         const result = await pool.request().query(query);
         return result.recordset?.[0]?.NextId || null;
     } catch (error) {
@@ -350,5 +346,6 @@ module.exports = {
     removeUnusedFiles,
     base64Encode,
     base64Decode,
-    getNextMaxId
+    getNextMaxId,
+    generateUUID,
 }
