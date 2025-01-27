@@ -87,10 +87,11 @@ const setSQLOrderId = (value) => {
 }
 
 const setSQLStringValue = (value) => {
-    if (!value) {
-        return null
+    if (!value || value === null || value === undefined || value === '') {
+        return `''`
     }
-    return `'${value}'`
+    return `N'${value.trim()}'`
+    // return escapeSQLString(value)
 }
 
 const setSQLDateTime = (date) => {
@@ -322,6 +323,40 @@ const getNextMaxId = async (fieldName, tableName) => {
     }
 };
 
+const deleteImage = (filePath) => {
+    try {
+        fs.unlinkSync(filePath);
+    } catch (error) {
+        console.log('Error :>> ', error);
+    }
+}
+
+const generateJWTT = (Payload) => {
+    // Set 1 month in seconds (30 days x 24 hours x 60 minutes x 60 seconds)
+    const oneMonthInSeconds = 30 * 24 * 60 * 60; 
+    return jwt.sign(Payload, process.env.SECRET_KEY, { expiresIn: oneMonthInSeconds });
+};
+
+const generateCODE = (name) => {
+    try {
+        // Ensure name is at least 3 characters by appending underscores
+        while (!name || name.length < 3) {
+            name += '_';
+        }
+
+        // Generate three random digits
+        const randomThreeDigits = Math.floor(Math.random() * 900) + 100; // Generates a number between 100 and 999
+
+        // Extract the first three characters of name
+        const firstThreeChars = name.slice(0, 3).toUpperCase();
+
+        // Combine the values to create a unique key
+        return `${firstThreeChars}${randomThreeDigits}`;
+    } catch (error) {
+        console.log('generate UKeyId Error:', error);
+    }
+};
+
 module.exports = {
     getServerIpAddress,
     getServerName,
@@ -348,4 +383,7 @@ module.exports = {
     base64Decode,
     getNextMaxId,
     generateUUID,
+    deleteImage,
+    generateJWTT,
+    generateCODE,
 }
