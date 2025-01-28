@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const userListController= require('../controllers/Users');
 const OrganizationMasterController = require('../controllers/OrganizationMaster');
+const auth = require("../middlewares/auth");
 
 // const auth = require("../middleware/auth")
 
@@ -10,7 +11,8 @@ const OrganizationMasterController = require('../controllers/OrganizationMaster'
 // router.post("/user/add", userListController.addUserList)
 // router.post("/user/version", userListController.versionUpdate)
 
-router.get('/fetchOrginizations', OrganizationMasterController.fetchOrginizations);
+router.get('/FetchOrginizations', OrganizationMasterController.fetchOrginizations);
+router.post('/OrganizationLogin', OrganizationMasterController.organizationLogin);
 router.post('/OrganizationMaster', OrganizationMasterController.CreateOrganozation);
 router.delete('/DeleteOrganizationMaster', OrganizationMasterController.removeOrganisation);
 

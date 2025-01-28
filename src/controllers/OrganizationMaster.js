@@ -1,6 +1,41 @@
-const { errorMessage, checkKeysAndRequireValues, successMessage, getNextMaxId, setSQLStringValue, setSQLBooleanValue, getCommonKeys, generateUUID, setSQLNumberValue, getCommonAPIResponse } = require("../common/main");
+const { errorMessage, checkKeysAndRequireValues, successMessage, getNextMaxId, setSQLStringValue, setSQLBooleanValue, getCommonKeys, generateUUID, setSQLNumberValue, getCommonAPIResponse, generateJWTT } = require("../common/main");
 const { createAllTableInDB } = require("../common/version");
 const { pool } = require("../sql/connectToDatabase");
+
+const organizationLogin = async (req, res)=>{
+    try{
+        const {Mobile1, Password} = req.body;
+
+        const missingKeys = checkKeysAndRequireValues(['Mobile1', 'Password'], req.body)
+
+        if(missingKeys.length > 0){
+            return res.status(404).json(errorMessage(`${missingKeys.join(', ')} is required`))
+        }
+
+        const result = await pool.request().query(`
+            select * from OrganizationMaster where Mobile1 = ${setSQLStringValue(Mobile1)} and Password = ${setSQLStringValue(Password)}
+        `);
+
+        if(result.recordset.length === 0){
+            return res.status(404).json(errorMessage('Invelid Email Or Password, Please Enter valid Email and Password'));
+        }
+
+        const token = generateJWTT({
+            OrganizationId : result?.recordset?.[0]?.OrganizationId,
+            OrganizationUkeyId : result?.recordset?.[0]?.OrganizationUkeyId,
+            OrganizationName : result?.recordset?.[0]?.OrganizationName,
+            Mobile1 : result?.recordset?.[0]?.Mobile1,
+            Email : result?.recordset?.[0]?.Email,
+            Role : result?.recordset?.[0]?.Role,
+            IsActive : result?.recordset?.[0]?.IsActive,
+        })
+
+        return res.status(200).json({...successMessage(), token, ...result?.recordset?.[0] });
+    }catch(error){
+        console.log("Organization Login Error : ", error);
+        return res.status(500).json(errorMessage(error.message))
+    }
+}
 
 const fetchOrginizations = async (req, res)=> {
     try{
@@ -33,7 +68,7 @@ const fetchOrginizations = async (req, res)=> {
 
 const CreateOrganozation = async (req, res)=>{
     try{
-        const {OrganizationUkeyId , OrganizerName, Mobile1, Mobile2, Email, AliasName, Description, Add1, Add2, City, StateCode, StateName, UPI, Role, IsActive, UserName, Password, UsrID, RazorpayKeyId, RazorpaySecretKey, RazorpayBusinessName, flag} = req.body;
+        const {OrganizationUkeyId , OrganizationName, Mobile1, Mobile2, Email, AliasName, Description, Add1, Add2, City, StateCode, StateName, UPI, Role, IsActive, Password, RazorpayKeyId, RazorpaySecretKey, RazorpayBusinessName, flag, DBversion} = req.body;
 
         const {IPAddress, ServerName, EntryTime} = getCommonKeys();
 
@@ -43,14 +78,14 @@ const CreateOrganozation = async (req, res)=>{
 
         const insertQuery = `
             insert into OrganizationMaster (
-                OrganizationUkeyId, OrganizerName, Mobile1, Mobile2, Email, AliasName, Description, Add1, Add2, City, StateCode, StateName, UPI, Role, IsActive, UserName, Password, UsrID, RazorpayKeyId, RazorpaySecretKey, RazorpayBusinessName, flag, IpAddress, HostName, EntryDate
+                OrganizationUkeyId, OrganizationName, Mobile1, Mobile2, Email, AliasName, Description, Add1, Add2, City, StateCode, StateName, UPI, Role, IsActive, Password, DBversion, RazorpayKeyId, RazorpaySecretKey, RazorpayBusinessName, flag, IpAddress, HostName, EntryDate
             ) values (
-                ${setSQLStringValue(ukeyid)}, ${setSQLStringValue(OrganizerName)}, ${setSQLStringValue(Mobile1)}, ${setSQLStringValue(Mobile2)}, ${setSQLStringValue(Email)}, ${setSQLStringValue(AliasName)}, ${setSQLStringValue(Description)}, ${setSQLStringValue(Add1)}, ${setSQLStringValue(Add2)}, ${setSQLStringValue(City)}, ${setSQLStringValue(StateCode)}, ${setSQLStringValue(StateName)}, ${setSQLStringValue(UPI)}, ${setSQLStringValue(Role)}, ${setSQLBooleanValue(IsActive)}, ${setSQLStringValue(UserName)}, ${setSQLStringValue(Password)}, ${setSQLStringValue(UsrID)}, ${setSQLStringValue(RazorpayKeyId)}, ${setSQLStringValue(RazorpaySecretKey)}, ${setSQLStringValue(RazorpayBusinessName)}, ${setSQLStringValue(flag)}, ${setSQLStringValue(IPAddress)}, ${setSQLStringValue(ServerName)}, ${setSQLStringValue(EntryTime)}
+                ${setSQLStringValue(ukeyid)}, ${setSQLStringValue(OrganizationName)}, ${setSQLStringValue(Mobile1)}, ${setSQLStringValue(Mobile2)}, ${setSQLStringValue(Email)}, ${setSQLStringValue(AliasName)}, ${setSQLStringValue(Description)}, ${setSQLStringValue(Add1)}, ${setSQLStringValue(Add2)}, ${setSQLStringValue(City)}, ${setSQLStringValue(StateCode)}, ${setSQLStringValue(StateName)}, ${setSQLStringValue(UPI)}, ${setSQLStringValue(Role)}, ${setSQLBooleanValue(IsActive)}, ${setSQLStringValue(Password)}, ${setSQLNumberValue(DBversion)}, ${setSQLStringValue(RazorpayKeyId)}, ${setSQLStringValue(RazorpaySecretKey)}, ${setSQLStringValue(RazorpayBusinessName)}, ${setSQLStringValue(flag)}, ${setSQLStringValue(IPAddress)}, ${setSQLStringValue(ServerName)}, ${setSQLStringValue(EntryTime)}
             );
         `
         const updateQuery = `
             update OrganizationMaster set
-            OrganizerName = ${setSQLStringValue(OrganizerName)}, 
+            OrganizationName = ${setSQLStringValue(OrganizationName)}, 
             Mobile1 = ${setSQLStringValue(Mobile1)}, 
             Mobile2 = ${setSQLStringValue(Mobile2)}, 
             Email = ${setSQLStringValue(Email)}, 
@@ -64,9 +99,8 @@ const CreateOrganozation = async (req, res)=>{
             UPI = ${setSQLStringValue(UPI)}, 
             Role = ${setSQLStringValue(Role)}, 
             IsActive = ${setSQLBooleanValue(IsActive)}, 
-            UserName = ${setSQLStringValue(UserName)}, 
-            Password = ${setSQLStringValue(Password)}, 
-            UsrID = ${setSQLStringValue(UsrID)}, 
+            Password = ${setSQLStringValue(Password)},
+            DBversion = ${setSQLBooleanValue(DBversion)},
             RazorpayKeyId = ${setSQLStringValue(RazorpayKeyId)}, 
             RazorpaySecretKey = ${setSQLStringValue(RazorpaySecretKey)}, 
             RazorpayBusinessName = ${setSQLStringValue(RazorpayBusinessName)}, 
@@ -83,7 +117,7 @@ const CreateOrganozation = async (req, res)=>{
                 return res.status(400).json(errorMessage("Do not send OrganizationUkeyId While creating new Organization"))
             }
 
-            const missingKeys = checkKeysAndRequireValues(['OrganizerName','Mobile1','Email','Role','IsActive','Password','flag'], req.body);
+            const missingKeys = checkKeysAndRequireValues(['OrganizationName','Mobile1','Email','Role','IsActive','Password','flag'], req.body);
         
             if(missingKeys.length > 0){
                 return res.status(404).json(errorMessage(`${missingKeys.join(', ')} is required`))
@@ -96,7 +130,7 @@ const CreateOrganozation = async (req, res)=>{
             return res.status(200).json({...successMessage('New Organisation Creted Successfully.'), ...req.body, OrganizationUkeyId : ukeyid});
         }else if (flag == 'U') {
             
-            const missingKeys = checkKeysAndRequireValues(['OrganizerName','Mobile1','Email','Role','IsActive','Password','flag', 'OrganizationUkeyId'], req.body);
+            const missingKeys = checkKeysAndRequireValues(['OrganizationName','Mobile1','Email','Role','IsActive','Password','flag', 'OrganizationUkeyId'], req.body);
         
             if(missingKeys.length > 0){
                 return res.status(404).json(errorMessage(`${missingKeys.join(', ')} is required`))
@@ -114,7 +148,7 @@ const CreateOrganozation = async (req, res)=>{
         }
     }catch(error){
         console.log('create organisation error :', error);
-        return res.status(500).json(error.message);
+        return res.status(500).json(errorMessage(error.message));
     }
 }
 
@@ -146,5 +180,6 @@ const removeOrganisation = async (req, res) => {
 module.exports = {
     fetchOrginizations,
     CreateOrganozation,
-    removeOrganisation
+    removeOrganisation,
+    organizationLogin,
 }

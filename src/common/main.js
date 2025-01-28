@@ -7,6 +7,7 @@ const { LIVE_URL } = require('./variable');
 const { pool } = require('../sql/connectToDatabase');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const jwt = require('jsonwebtoken')
 
 const generateUUID = () => {
     const uniqueID = uuidv4().toLocaleUpperCase();
